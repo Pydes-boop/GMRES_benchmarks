@@ -152,6 +152,8 @@ def instantiate_solvers(solvers: List[SolverTest], problem_size: int, model_numb
             backprojector = elsa.adjoint(projector)
             s = solver.solver_class(projector, backprojector, sinogram)
         else:
+            # setup reconstruction problem
+    problem = elsa.WLSProblem(projector, sinogram)
             s = solver.solver_class(problem, **solver.extra_args)
 
         instantiated_solvers.append((s, solver.solver_name))
