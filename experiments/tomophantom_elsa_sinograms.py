@@ -55,7 +55,7 @@ def tomophantom_model(model, size, num_angles, arc=180, noise=False):
 
     # TomoPhantom starts at a different angle compared to elsa
     # the correct solution is to offset it to the correct angle
-    if arc is not 180 and not 360:
+    if arc != 180 and arc != 360:
         start = 90
     else:
         # for some models (11...) offsetting by 90 degrees is bugged, for some reason the xray sources seem to start way too close to the phantom when offsetting it
@@ -114,7 +114,7 @@ elsa.logger_pyelsa_generators.setLevel(elsa.LogLevel.OFF)
 model_number = 1
 cmap = 'gray'
 
-size = np.array([512, 512])
+size = np.array([500, 500])
 volume_descriptor = elsa.VolumeDescriptor(size)
 arc = 360
 

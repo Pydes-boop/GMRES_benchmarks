@@ -99,4 +99,25 @@ nano .bashrc
 
 # reload .bashrc and now tomophantom should be found by your compiler
 source .bashrc
+
+# even then then sometimes doesnt work / is system dependent, its annoying try getting it from conda ([conda cheatsheet](https://docs.conda.io/projects/conda/en/latest/user-guide/cheatsheet.html))
+
+# install conda
+wget URLtoMinicondaInstallation link
+bash Miniconda3-latest-Linux-x86_64.sh
+# follow installation instructions and restart bash
+conda create --name elsa_tomophantom
+conda activate elsa_tomophantom
+conda install pip
+
+# install python dependencies for elsa and install elsa here
+# install tomophantom as conda package
+conda install tomophantom -c ccpi
+
+# or install tomophantom manually as conda package because it doesnt work sometimes, because of weird libgcc errors
+pip install cython
+cmake ../ -DCONDA_BUILD=ON -DBUILD_MATLAB_WRAPPER=OFF -DBUILD_PYTHON_WRAPPER=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=./install
+
+# tomophantom should now be listed when:
+conda list
 ```
