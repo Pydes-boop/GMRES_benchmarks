@@ -1,6 +1,6 @@
-# GMRES-experiments
+# GMRES benchmarks
 
-Collection of testing and experiments scripts that are used to evaluate AB-GMRES and BA-GMRES implementations for pyelsa. This collection of scripts includes all code that was used to generate benchmarks for the ABBA GMRES implementations in [elsa](https://gitlab.lrz.de/IP/elsa) that were implemented , as well as some experiments using and applying [tomophantom](https://github.com/dkazanc/TomoPhantom) with elsa.
+Collection of benchmarks and experiments scripts that are used to evaluate AB-GMRES and BA-GMRES implementations for pyelsa. This collection of scripts includes all code that was used to generate benchmarks for the ABBA GMRES implementations in [elsa](https://gitlab.lrz.de/IP/elsa) that were implemented , as well as some experiments using and applying [tomophantom](https://github.com/dkazanc/TomoPhantom) with elsa.
 
 Installation instructions for all dependencies can be found at the [bottom](#prerequisites-and-installation-instructions) of the page
 
