@@ -20,21 +20,41 @@ def mse(optimized: np.ndarray, original: np.ndarray) -> float:
 ### --- Setup --- ###
 
 # todo change iter depending on matched_comparison
-nmax_iter = 30
+nmax_iter = 20
 size = 500
 min_angles = 20
 max_angles = 501
-angles_steps = 1
-repeats = 20
+angles_steps = 2
+repeats = 10
 
-ls = ['-',':','--','-.']
+# specific linestyles, otherwise its hard to differentiate
+# stronger lines, like full line or -- are painted first
+ls = [
+    '-',
+    '--',
+    '-.',
+    ':',
+    (0, (1, 2, 1, 2, 3, 2, 3, 2)),
+    (0, (3, 4, 1, 4, 1, 4))
+]
+
+# colormap, colorblindsafe from https://personal.sron.nl/~pault/#sec:qualitative
+# didnt look good
+# cm = [
+#     '#66CCEE',
+#     '#228833',
+#     '#CCBB44',
+#     '#EE6677',
+#     '#AA3377',
+#     '#4477AA'
+# ]
 
 solvers = [
-    SolverTest(elsa.ABGMRES, 'matched ABGMRES', is_gmres=True, linestyle=ls[0%4]),
-    SolverTest(elsa.BAGMRES, 'matched BAGMRES', is_gmres=True, linestyle=ls[1%4]),
-    SolverTest(elsa.ABGMRES, 'unmatched ABGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[2%4]),
-    SolverTest(elsa.BAGMRES, 'unmatched BAGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[3%4]),
-    SolverTest(elsa.CG, 'CG', linestyle=ls[5%4])
+    SolverTest(elsa.ABGMRES, 'matched ABGMRES', is_gmres=True, linestyle=ls[0]),
+    SolverTest(elsa.BAGMRES, 'matched BAGMRES', is_gmres=True, linestyle=ls[1]),
+    SolverTest(elsa.ABGMRES, 'unmatched ABGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[2]),
+    SolverTest(elsa.BAGMRES, 'unmatched BAGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[3]),
+    SolverTest(elsa.CG, 'CG', linestyle=ls[4])
 ]
 
 ### --- Iteration --- ###
@@ -71,8 +91,8 @@ def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, p
         durations[current] = time.process_time() - start
         mses[current] = mse(x, optimal_phantom)
 
-    times[num].append(np.amin(durations))
-    distances[num].append(np.amin(mses))
+    times[num].append(np.mean(durations))
+    distances[num].append(np.mean(mses))
 
 
 for num_angles in range(min_angles,max_angles,angles_steps):
@@ -95,9 +115,6 @@ for num_angles in range(min_angles,max_angles,angles_steps):
     # simulate the sinogram
     sinogram = projector.apply(phantom)
 
-    # new backprojection
-    backprojector = elsa.adjoint(projector)
-
     for j, solver in enumerate(solvers):
         solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=times, distances=distances, num=j, optimal_phantom=optimal_phantom, nmax_iter=nmax_iter, repeats=repeats)
 
@@ -105,7 +122,7 @@ print(f'Done with optimizing starting to plot now')
 
 import matplotlib.pyplot as plt  # local imports so that we can switch to headless mode before importing
 
-dir_path = os.path.dirname(os.path.abspath(__file__)) + "/"
+dir_path = os.path.dirname(os.path.abspath(__file__)) + "/angles_comparison/"
 
 # Plotting MSE
 fig, ax = plt.subplots()

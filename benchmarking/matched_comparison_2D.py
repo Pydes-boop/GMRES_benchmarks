@@ -40,7 +40,7 @@ def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, p
         mses[current] = mse(x, optimal_phantom)
 
     times[num].append(np.mean(durations))
-    distances[num].append(np.amin(mses))
+    distances[num].append(np.mean(mses))
 
 ### --- Iteration --- ###
 elsa.logger_pyelsa_solvers.setLevel(elsa.LogLevel.OFF)
@@ -50,31 +50,51 @@ elsa.logger_pyelsa_generators.setLevel(elsa.LogLevel.OFF)
 
 ### --- Solvers --- ###
 
-ls = ['-',':','--','-.']
+# specific linestyles, otherwise its hard to differentiate
+# stronger lines, like full line or -- are painted first
+ls = [
+    '-',
+    '--',
+    '-.',
+    ':',
+    (0, (1, 2, 1, 2, 3, 2, 3, 2)),
+    (0, (3, 4, 1, 4, 1, 4))
+]
+
+# colormap, colorblindsafe from https://personal.sron.nl/~pault/#sec:qualitative
+# looked ugly but maybe you can try it
+# cm = [
+#     '#33BBEE',
+#     '#009988',
+#     '#EE7733',
+#     '#CC3311',
+#     '#EE3377',
+#     '#0077BB'
+# ]
 
 solvers_matched = [
-        SolverTest(elsa.ABGMRES, 'ABGMRES', is_gmres=True, linestyle=ls[0%4]),
-        SolverTest(elsa.BAGMRES, 'BAGMRES', is_gmres=True, linestyle=ls[1%4]),
-        SolverTest(elsa.CG, 'CG', linestyle=ls[2%4]),
-        SolverTest(elsa.FGM, 'FGM', linestyle=ls[3%4]),
-        SolverTest(elsa.OGM, 'OGM', linestyle=ls[5%4]),
-        SolverTest(elsa.GradientDescent, 'Gradient Descent', linestyle=ls[6%4])  # with 1 / lipschitz as step size
+        SolverTest(elsa.ABGMRES, 'ABGMRES', is_gmres=True, linestyle=ls[0]),
+        SolverTest(elsa.BAGMRES, 'BAGMRES', is_gmres=True, linestyle=ls[1]),
+        SolverTest(elsa.CG, 'CG', linestyle=ls[2]),
+        SolverTest(elsa.FGM, 'FGM', linestyle=ls[3]),
+        SolverTest(elsa.OGM, 'OGM', linestyle=ls[4]),
+        SolverTest(elsa.GradientDescent, 'Gradient Descent', linestyle=ls[5])  # with 1 / lipschitz as step size
     ]
 
 solvers_unmatched = [
-    SolverTest(elsa.ABGMRES, 'matched ABGMRES', is_gmres=True, linestyle=ls[0%4]),
-    SolverTest(elsa.BAGMRES, 'matched BAGMRES', is_gmres=True, linestyle=ls[1%4]),
-    SolverTest(elsa.ABGMRES, 'unmatched ABGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[2%4]),
-    SolverTest(elsa.BAGMRES, 'unmatched BAGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[3%4]),
-    SolverTest(elsa.CG, 'CG', linestyle=ls[5%4])
+    SolverTest(elsa.ABGMRES, 'matched ABGMRES', is_gmres=True, linestyle=ls[0]),
+    SolverTest(elsa.BAGMRES, 'matched BAGMRES', is_gmres=True, linestyle=ls[1]),
+    SolverTest(elsa.ABGMRES, 'unmatched ABGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[2]),
+    SolverTest(elsa.BAGMRES, 'unmatched BAGMRES', is_gmres=True, is_unmatched=True, linestyle=ls[3]),
+    SolverTest(elsa.CG, 'CG', linestyle=ls[4])
 ]
 
 ### --- Setup --- ###
 size = 500
 min_iter = 1
-max_iter = 20
+max_iter = 30
 iter_steps = 1
-repeats = 20
+repeats = 10
 
 # only have to setup these things once because everything has the same settings
 # settings from how the phantoms and sinograms were generated in ../experiments/
@@ -91,7 +111,7 @@ projectorUnmatched = elsa.JosephsMethodCUDA(volume_descriptor, sino_descriptor, 
 dir_path = os.path.dirname(os.path.abspath(__file__))
 dir_path = dir_path.replace("benchmarking", "experiments") + "/phantoms_sinograms"
 
-save_path = os.path.dirname(os.path.abspath(__file__)) + "/"
+save_path = os.path.dirname(os.path.abspath(__file__)) + "/matched_comparison_2D/"
 
 # print(dir_path.replace("benchmarking", "experiments") + "/phantoms_sinograms")
 
@@ -137,12 +157,20 @@ for ph, si in zip(phantoms, sinograms):
 
     print(f'Done with optimizing matched solver for current sino, starting to plot now')
 
+    # getting y lim
+    y_max = -1
+    for i in range(len(solvers_matched)):
+        if distancesM[i][0] >= y_max:
+            y_max = distancesM[i][0]
+        
+
     # Plotting times
     name = ph.split("phantom_tp_model_",1)[1]
     name = name.split("_noise",1)[0]
     fig, ax = plt.subplots()
     ax.set_xlabel('execution time [s]')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over execution time, model ' + name)
     for dist, times, solver in zip(distancesM, timesM, solvers_matched):
         ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
@@ -154,6 +182,7 @@ for ph, si in zip(phantoms, sinograms):
     fig, ax = plt.subplots()
     ax.set_xlabel('number of iterations')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
     for dist, solver in zip(distancesM, solvers_matched):
         ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
@@ -181,12 +210,19 @@ for ph, si in zip(phantomsNoise, sinogramsNoise):
 
     print(f'Done with optimizing matched solver for current sino, starting to plot now')
 
+    # getting y lim
+    y_max = -1
+    for i in range(len(solvers_matched)):
+        if distancesM[i][0] >= y_max:
+            y_max = distancesM[i][0]
+
     # Plotting times
     name = ph.split("phantom_tp_model_",1)[1]
     name = name.split("_noise",1)[0]
     fig, ax = plt.subplots()
     ax.set_xlabel('execution time [s]')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over execution time, model ' + name)
     for dist, times, solver in zip(distancesM, timesM, solvers_matched):
         ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
@@ -198,6 +234,7 @@ for ph, si in zip(phantomsNoise, sinogramsNoise):
     fig, ax = plt.subplots()
     ax.set_xlabel('number of iterations')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
     for dist, solver in zip(distancesM, solvers_matched):
         ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
@@ -227,12 +264,19 @@ for ph, si in zip(phantoms, sinograms):
 
     print(f'Done with optimizing matched solver for current sino, starting to plot now')
 
+    # getting y lim
+    y_max = -1
+    for i in range(len(solvers_unmatched)):
+        if distancesU[i][0] >= y_max:
+            y_max = distancesU[i][0]
+
     # Plotting times
     name = ph.split("phantom_tp_model_",1)[1]
     name = name.split("_noise",1)[0]
     fig, ax = plt.subplots()
     ax.set_xlabel('execution time [s]')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over execution time, model ' + name)
     for dist, times, solver in zip(distancesU, timesU, solvers_unmatched):
         ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
@@ -244,6 +288,7 @@ for ph, si in zip(phantoms, sinograms):
     fig, ax = plt.subplots()
     ax.set_xlabel('number of iterations')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
     for dist, solver in zip(distancesU, solvers_unmatched):
         ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
@@ -272,12 +317,19 @@ for ph, si in zip(phantomsNoise, sinogramsNoise):
 
     print(f'Done with optimizing matched solver for current sino, starting to plot now')
 
+    # getting y lim
+    y_max = -1
+    for i in range(len(solvers_unmatched)):
+        if distancesU[i][0] >= y_max:
+            y_max = distancesU[i][0]
+
     # Plotting times
     name = ph.split("phantom_tp_model_",1)[1]
     name = name.split("_noise",1)[0]
     fig, ax = plt.subplots()
     ax.set_xlabel('execution time [s]')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over execution time, model ' + name)
     for dist, times, solver in zip(distancesU, timesU, solvers_unmatched):
         ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
@@ -289,6 +341,7 @@ for ph, si in zip(phantomsNoise, sinogramsNoise):
     fig, ax = plt.subplots()
     ax.set_xlabel('number of iterations')
     ax.set_ylabel('MSE')
+    ax.set_ylim([None, y_max])
     ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
     for dist, solver in zip(distancesU, solvers_unmatched):
         ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
