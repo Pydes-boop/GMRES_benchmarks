@@ -225,7 +225,7 @@ def mse(optimized: np.ndarray, original: np.ndarray) -> float:
 
 # todo change iter depending on matched_comparison
 min_iter = 1
-max_iter = 20
+max_iter = 21
 iter_steps = 1
 repeats = 10
 
@@ -241,7 +241,7 @@ ls = [
     '-.',
     ':',
     (0, (1, 2, 1, 2, 3, 2, 3, 2)),
-    (0, (3, 4, 1, 4, 1, 4))
+    (0, (3, 2, 1, 2, 1, 2, 1, 2))
 ]
 
 solvers = [
@@ -274,7 +274,10 @@ dir_path = dir_path.replace("benchmarking", "experiments") + "/phantoms_sinogram
 
 save_path = os.path.dirname(os.path.abspath(__file__)) + "/filter_comparison/"
 
-# print(dir_path.replace("benchmarking", "experiments") + "/phantoms_sinograms")
+# create new folder for runtime so pictures dont overwrite each other
+timestr = time.strftime("%d%m%Y-%H%M%S")
+save_path = save_path + timestr + "/"
+os.mkdir(save_path)
 
 # https://pynative.com/python-list-files-in-a-directory/
 # list to store files
@@ -301,112 +304,91 @@ sinograms = [s for s in sinograms if "noise_False" in s]
 sinograms.sort()
 
 def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, projector_class_unmatched: elsa.JosephsMethodCUDA, sinogram: elsa.DataContainer, times, distances, num, optimal_phantom, nmax_iter, repeats, sino_descriptor, x0, filter=False):
-    durations = [-1.0] * repeats
-    mses = [-1.0] * repeats
+    start = time.process_time()
+    x = np.asarray(solver.solver_class(projector_class_unmatched, elsa.adjoint(projector_class_unmatched), sinogram, x0, nmax_iter, sino_descriptor=sino_descriptor, filter=solver.filter))
+    times[num].append(time.process_time() - start)
+    distances[num].append(mse(x, optimal_phantom))
 
-    for current in range(repeats):   
-        print("Applying " + solver.solver_name + " for " + str(nmax_iter)) 
-        start = time.process_time()
-        x = np.asarray(solver.solver_class(projector_class_unmatched, elsa.adjoint(projector_class_unmatched), sinogram, x0, nmax_iter, sino_descriptor=sino_descriptor, filter=solver.filter))
-        durations[current] = time.process_time() - start
-        mses[current] = mse(x, optimal_phantom)
+def average(list, solvers):
+    l = [[] for _ in solvers]
+    for elem in list:
+        for i in range(len(elem)):
+            l[i].append(elem[i])
 
-    times[num].append(np.mean(durations))
-    distances[num].append(np.mean(mses))
+    ret = [[] for _ in solvers]
+    for i in range(len(l)):
+        ret[i] = np.average(l[i], axis=0)
+
+    return ret
 
 ### Matched Case ###
 
 ### no noise ###
 
-for ph, si in zip(phantoms, sinograms):
-    
-    distancesM = [[] for _ in solvers]
-    timesM = [[] for _ in solvers]
+def test(phantoms, sinograms, solvers, experiment: str):
 
-    print("experimenting with model " + str(ph))
-    phantom = np.load(ph)
-    sinogram = elsa.DataContainer(np.load(si))
+    for ph, si in zip(phantoms, sinograms):
 
-    for iter in range(min_iter,max_iter,iter_steps):
-        for j, solver in enumerate(solvers):
-            solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projector, sinogram=sinogram, times=timesM, distances=distancesM, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats, sino_descriptor=sino_descriptor, x0=x0, filter=solver.filter)
+        distanceRep = []
+        timesRep = []
 
+        for i in range(repeats):
+            distances = [[] for _ in solvers]
+            times = [[] for _ in solvers]
 
-    print(f'Done with optimizing matched solver for current sino, starting to plot now')
+            print("experimenting with model " + str(ph) + " for repeat " + str(i))
+            phantom = np.load(ph)
+            sinogram = elsa.DataContainer(np.load(si))
 
-    import matplotlib.pyplot as plt
+            for iter in range(min_iter,max_iter,iter_steps):
+                for j, solver in enumerate(solvers):
+                    solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projector, sinogram=sinogram, times=times, distances=distances, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats, sino_descriptor=sino_descriptor, x0=x0, filter=solver.filter)
 
-    # Plotting times
-    name = ph.split("phantom_tp_model_",1)[1]
-    name = name.split("_noise",1)[0]
+            distanceRep.append(distances)
+            timesRep.append(times)
 
-    # Plotting times
-    fig, ax = plt.subplots()
-    ax.set_xlabel('execution time [s]')
-    ax.set_ylabel('MSE')
-    ax.set_title(f'Mean Square Error over execution time, GMRES with FBP')
-    for dist, times, solver in zip(distancesM, timesM, solvers):
-        ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
+        # average data that can be plotted
+        dist = average(distanceRep, solvers)
+        tim = average(timesRep, solvers)
 
-    plt.savefig(save_path + "fbp_model_" + str(name) +"_2D_noise_False_mse_times.png", dpi=600)
+        import matplotlib.pyplot as plt
 
-    # Plotting Iterations
-    fig, ax = plt.subplots()
-    ax.set_xlabel('number of iterations')
-    ax.set_ylabel('MSE')
-    ax.set_title(f'Mean Square Error over number of iterations, GMRES with FBP')
-    for dist, solver in zip(distancesM, solvers):
-        ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
+        print(f'Done with optimizing matched solver for current sino, starting to plot now')
 
-    plt.savefig(save_path + "fbp_model_" + str(name) + "_2D_noise_False_mse_iter.png", dpi=600)
+        # Plotting times
+        name = ph.split("phantom_tp_model_",1)[1]
+        name = name.split("_noise",1)[0]
 
-    plt.close('all')
+        # Plotting times
+        fig, ax = plt.subplots()
+        ax.set_xlabel('execution time [s]')
+        ax.set_ylabel('MSE')
+        ax.set_title(f'Mean Square Error over execution time, model {name}')
+        for d, t, solver in zip(dist, tim, solvers):
+            ax.plot(t, d, label=solver.solver_name, linestyle=solver.linestyle)
+        ax.legend()
 
-for ph, si in zip(phantomsNoise, sinogramsNoise):
-    
-    distancesM = [[] for _ in solvers]
-    timesM = [[] for _ in solvers]
+        plt.savefig(save_path + experiment + "_model_" + str(name) +"_mse_times.png", dpi=600)
 
-    print("experimenting with model " + str(ph))
-    phantom = np.load(ph)
-    sinogram = elsa.DataContainer(np.load(si))
+        # Plotting Iterations
+        fig, ax = plt.subplots()
+        ax.set_xlabel('number of iterations')
+        ax.set_ylabel('MSE')
+        ax.set_title(f'Mean Square Error over number of iterations, model {name}')
+        for d, solver in zip(dist, solvers):
+            ax.plot(list(range(min_iter,max_iter,iter_steps)), d, label=solver.solver_name, linestyle=solver.linestyle)
+        ax.legend()
 
-    for iter in range(min_iter,max_iter,iter_steps):
-        for j, solver in enumerate(solvers):
-            solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projector, sinogram=sinogram, times=timesM, distances=distancesM, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats, sino_descriptor=sino_descriptor, x0=x0, filter=solver.filter)
+        plt.savefig(save_path + experiment + "_model_" + str(name) + "_mse_iter.png", dpi=600)
 
+        plt.close('all')
 
-    print(f'Done with optimizing matched solver for current sino, starting to plot now')
+### FBP Unmatched ###
+### no noise ###
 
-    import matplotlib.pyplot as plt
-    import os
+test(phantoms, sinograms, solvers, "fbp")
 
-    # Plotting times
-    name = ph.split("phantom_tp_model_",1)[1]
-    name = name.split("_noise",1)[0]
+### FBP Unmatched ###
+### noise ###
 
-    # Plotting times
-    fig, ax = plt.subplots()
-    ax.set_xlabel('execution time [s]')
-    ax.set_ylabel('MSE')
-    ax.set_title(f'Mean Square Error over execution time, GMRES with FBP')
-    for dist, times, solver in zip(distancesM, timesM, solvers):
-        ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "fbp_model_" + str(name) +"_2D_noise_True_mse_times.png", dpi=600)
-
-    # Plotting Iterations
-    fig, ax = plt.subplots()
-    ax.set_xlabel('number of iterations')
-    ax.set_ylabel('MSE')
-    ax.set_title(f'Mean Square Error over number of iterations, GMRES with FBP')
-    for dist, solver in zip(distancesM, solvers):
-        ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "fbp_model_" + str(name) + "_2D_noise_True_mse_iter.png", dpi=600)
-
-    plt.close('all')
+test(phantoms, sinogramsNoise, solvers, "fbp_noise")

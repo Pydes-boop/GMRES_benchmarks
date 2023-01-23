@@ -14,5 +14,4 @@
 
 #SBATCH --mem-per-cpu=2000
 
-srun python3 filter_comparison_analytical.py
-srun python3 filter_comparison_analytical.py
+srun python3 angles_comparison.py

@@ -10,9 +10,8 @@
 
 #SBATCH --gpus=1
 
-#SBATCH --time=8:00:00
+#SBATCH --time=3:00:00
 
 #SBATCH --mem-per-cpu=2000
 
-srun python3 filter_comparison_analytical.py
-srun python3 filter_comparison_analytical.py
+srun python3 matched_comparison_3D.py

@@ -18,30 +18,6 @@ def mse(optimized: np.ndarray, original: np.ndarray) -> float:
     diff = (original - optimized) ** 2
     return np.sum(diff) / size
 
-def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, projector_class_unmatched: elsa.JosephsMethodCUDA, sinogram: elsa.DataContainer, times, distances, num, optimal_phantom, nmax_iter, repeats):
-    durations = [-1.0] * repeats
-    mses = [-1.0] * repeats
-
-    for current in range(repeats):
-        
-        if solver.is_gmres:
-            if solver.is_unmatched:
-                solv = solver.solver_class(projector_class_unmatched, sinogram)
-            else:
-                solv = solver.solver_class(projector_class_matched, sinogram)
-        else:
-            # setup reconstruction problem
-            problem = elsa.WLSProblem(projector_class_matched, sinogram)
-            solv = solver.solver_class(problem)
-            
-        start = time.process_time()
-        x = np.asarray(solv.solve(nmax_iter))
-        durations[current] = time.process_time() - start
-        mses[current] = mse(x, optimal_phantom)
-
-    times[num].append(np.mean(durations))
-    distances[num].append(np.mean(mses))
-
 ### --- Iteration --- ###
 elsa.logger_pyelsa_solvers.setLevel(elsa.LogLevel.OFF)
 elsa.logger_pyelsa_projectors.setLevel(elsa.LogLevel.OFF)
@@ -58,19 +34,8 @@ ls = [
     '-.',
     ':',
     (0, (1, 2, 1, 2, 3, 2, 3, 2)),
-    (0, (3, 4, 1, 4, 1, 4))
+    (0, (3, 2, 1, 2, 1, 2, 1, 2))
 ]
-
-# colormap, colorblindsafe from https://personal.sron.nl/~pault/#sec:qualitative
-# looked ugly but maybe you can try it
-# cm = [
-#     '#33BBEE',
-#     '#009988',
-#     '#EE7733',
-#     '#CC3311',
-#     '#EE3377',
-#     '#0077BB'
-# ]
 
 solvers_matched = [
         SolverTest(elsa.ABGMRES, 'ABGMRES', is_gmres=True, linestyle=ls[0]),
@@ -92,7 +57,7 @@ solvers_unmatched = [
 ### --- Setup --- ###
 size = 500
 min_iter = 1
-max_iter = 30
+max_iter = 31
 iter_steps = 1
 repeats = 10
 
@@ -112,6 +77,11 @@ dir_path = os.path.dirname(os.path.abspath(__file__))
 dir_path = dir_path.replace("benchmarking", "experiments") + "/phantoms_sinograms"
 
 save_path = os.path.dirname(os.path.abspath(__file__)) + "/matched_comparison_2D/"
+
+# create new folder for runtime so pictures dont overwrite each other
+timestr = time.strftime("%d%m%Y-%H%M%S")
+save_path = save_path + timestr + "/"
+os.mkdir(save_path)
 
 # print(dir_path.replace("benchmarking", "experiments") + "/phantoms_sinograms")
 
@@ -139,214 +109,104 @@ sinogramsNoise.sort()
 sinograms = [s for s in sinograms if "noise_False" in s]
 sinograms.sort()
 
-### matched solvers test ####
-### no noise ###
+def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, projector_class_unmatched: elsa.JosephsMethodCUDA, sinogram: elsa.DataContainer, times, distances, num, optimal_phantom, nmax_iter, repeats):
 
-for ph, si in zip(phantoms, sinograms):
-    
-    distancesM = [[] for _ in solvers_matched]
-    timesM = [[] for _ in solvers_matched]
-
-    print("experimenting with model " + str(ph))
-    phantom = np.load(ph)
-    sinogram = elsa.DataContainer(np.load(si))
-
-    for iter in range(min_iter,max_iter,iter_steps):
-        for j, solver in enumerate(solvers_matched):
-            solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=timesM, distances=distancesM, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats)
-
-    print(f'Done with optimizing matched solver for current sino, starting to plot now')
-
-    # getting y lim
-    y_max = -1
-    for i in range(len(solvers_matched)):
-        if distancesM[i][0] >= y_max:
-            y_max = distancesM[i][0]
+    if solver.is_gmres:
+        if solver.is_unmatched:
+            solv = solver.solver_class(projector_class_unmatched, sinogram)
+        else:
+            solv = solver.solver_class(projector_class_matched, sinogram)
+    else:
+        # setup reconstruction problem
+        problem = elsa.WLSProblem(projector_class_matched, sinogram)
+        solv = solver.solver_class(problem)
         
+    start = time.process_time()
+    x = np.asarray(solv.solve(nmax_iter))
+    times[num].append(time.process_time() - start)
+    distances[num].append(mse(x, optimal_phantom))
 
-    # Plotting times
-    name = ph.split("phantom_tp_model_",1)[1]
-    name = name.split("_noise",1)[0]
-    fig, ax = plt.subplots()
-    ax.set_xlabel('execution time [s]')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over execution time, model ' + name)
-    for dist, times, solver in zip(distancesM, timesM, solvers_matched):
-        ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
+def average(list, solvers):
+    l = [[] for _ in solvers]
+    for elem in list:
+        for i in range(len(elem)):
+            l[i].append(elem[i])
 
-    plt.savefig(save_path + "matched_model_" + name + "_mse_times.png", dpi=600)
+    ret = [[] for _ in solvers]
+    for i in range(len(l)):
+        ret[i] = np.average(l[i], axis=0)
 
-    # Plotting Iterations
-    fig, ax = plt.subplots()
-    ax.set_xlabel('number of iterations')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
-    for dist, solver in zip(distancesM, solvers_matched):
-        ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
+    return ret
 
-    plt.savefig(save_path + "matched_model_" + name + "_mse_iter.png", dpi=600)
+def test(phantoms, sinograms, solvers, experiment: str):
+    for ph, si in zip(phantoms, sinograms):
 
-    plt.close('all')
+        distanceRep = []
+        timesRep = []
+
+        for i in range(repeats):
+            distances = [[] for _ in solvers]
+            times = [[] for _ in solvers]
+
+            print("experimenting with model " + str(ph))
+            phantom = np.load(ph)
+            sinogram = elsa.DataContainer(np.load(si))
+
+            for iter in range(min_iter,max_iter,iter_steps):
+                for j, solver in enumerate(solvers):
+                    solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=times, distances=distances, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats)
+            
+            distanceRep.append(distances)
+            timesRep.append(times)
+
+        # average data that can be plotted
+        dist = average(distanceRep, solvers)
+        tim = average(timesRep, solvers)
+
+        print(f'Done with optimizing matched solver for current sino, starting to plot now')  
+
+        # Plotting times
+        name = ph.split("phantom_tp_model_",1)[1]
+        name = name.split("_noise",1)[0]
+        fig, ax = plt.subplots()
+        ax.set_xlabel('execution time [s]')
+        ax.set_ylabel('MSE')
+        ax.set_title(f'Mean Square Error over execution time, model ' + name)
+        for d, t, solver in zip(dist, tim, solvers):
+            ax.plot(t, d, label=solver.solver_name, linestyle=solver.linestyle)
+        ax.legend()
+
+        plt.savefig(save_path + experiment + "_model_" + name + "_mse_times.png", dpi=600)
+
+        # Plotting Iterations
+        fig, ax = plt.subplots()
+        ax.set_xlabel('number of iterations')
+        ax.set_ylabel('MSE')
+        ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
+        for d, solver in zip(dist, solvers):
+            ax.plot(list(range(min_iter,max_iter,iter_steps)), d, label=solver.solver_name, linestyle=solver.linestyle)
+        ax.legend()
+
+        plt.savefig(save_path + experiment + "_model_" + name + "_mse_iter.png", dpi=600)
+
+        plt.close('all')
+
+### matched solvers test ####
+### no noise ###
+
+test(phantoms, sinograms, solvers_matched, "matched")
 
 ### matched solvers test ####
 ### noise ###
 
-for ph, si in zip(phantomsNoise, sinogramsNoise):
-
-    distancesM = [[] for _ in solvers_matched]
-    timesM = [[] for _ in solvers_matched]
-
-    print("experimenting with model " + str(ph))
-    phantom = np.load(ph)
-    sinogram = elsa.DataContainer(np.load(si))
-
-    for iter in range(min_iter,max_iter,iter_steps):
-        for j, solver in enumerate(solvers_matched):
-            solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=timesM, distances=distancesM, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats)
-
-    print(f'Done with optimizing matched solver for current sino, starting to plot now')
-
-    # getting y lim
-    y_max = -1
-    for i in range(len(solvers_matched)):
-        if distancesM[i][0] >= y_max:
-            y_max = distancesM[i][0]
-
-    # Plotting times
-    name = ph.split("phantom_tp_model_",1)[1]
-    name = name.split("_noise",1)[0]
-    fig, ax = plt.subplots()
-    ax.set_xlabel('execution time [s]')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over execution time, model ' + name)
-    for dist, times, solver in zip(distancesM, timesM, solvers_matched):
-        ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "matched_model_" + name + "_noisy_mse_times.png", dpi=600)
-
-    # Plotting Iterations
-    fig, ax = plt.subplots()
-    ax.set_xlabel('number of iterations')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
-    for dist, solver in zip(distancesM, solvers_matched):
-        ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "matched_model_" + name + "_noisy_mse_iter.png", dpi=600)
-
-    plt.close('all')
-
+test(phantoms, sinogramsNoise, solvers_matched, "matched_noise")
 
 ### unmatched solvers test ###
 ### no noise ###
 
-print("testing unmtached solvers now")
-for ph, si in zip(phantoms, sinograms):
-
-    distancesU = [[] for _ in solvers_unmatched]
-    timesU = [[] for _ in solvers_unmatched]
-
-    print("experimenting with model " + str(ph))
-    phantom = np.load(ph)
-    sinogram = elsa.DataContainer(np.load(si))
-
-    for iter in range(min_iter,max_iter,iter_steps):
-        for j, solver in enumerate(solvers_unmatched):
-            solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=timesU, distances=distancesU, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats)
-
-    print(f'Done with optimizing matched solver for current sino, starting to plot now')
-
-    # getting y lim
-    y_max = -1
-    for i in range(len(solvers_unmatched)):
-        if distancesU[i][0] >= y_max:
-            y_max = distancesU[i][0]
-
-    # Plotting times
-    name = ph.split("phantom_tp_model_",1)[1]
-    name = name.split("_noise",1)[0]
-    fig, ax = plt.subplots()
-    ax.set_xlabel('execution time [s]')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over execution time, model ' + name)
-    for dist, times, solver in zip(distancesU, timesU, solvers_unmatched):
-        ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "unmatched_model_" + name + "_mse_times.png", dpi=600)
-
-    # Plotting Iterations
-    fig, ax = plt.subplots()
-    ax.set_xlabel('number of iterations')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
-    for dist, solver in zip(distancesU, solvers_unmatched):
-        ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "unmatched_model_" + name + "_mse_iter.png", dpi=600)
-
-    plt.close('all')
+test(phantoms, sinograms, solvers_unmatched, "unmatched")
 
 ### unmatched solvers test ###
 ### noise ###
 
-print("testing unmtached solvers now")
-for ph, si in zip(phantomsNoise, sinogramsNoise):
-
-    distancesU = [[] for _ in solvers_unmatched]
-    timesU = [[] for _ in solvers_unmatched]
-
-    print("experimenting with model " + str(ph))
-    phantom = np.load(ph)
-    sinogram = elsa.DataContainer(np.load(si))
-
-    for iter in range(min_iter,max_iter,iter_steps):
-        for j, solver in enumerate(solvers_unmatched):
-            solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=timesU, distances=distancesU, num=j, optimal_phantom=phantom, nmax_iter=iter, repeats=repeats)
-
-    print(f'Done with optimizing matched solver for current sino, starting to plot now')
-
-    # getting y lim
-    y_max = -1
-    for i in range(len(solvers_unmatched)):
-        if distancesU[i][0] >= y_max:
-            y_max = distancesU[i][0]
-
-    # Plotting times
-    name = ph.split("phantom_tp_model_",1)[1]
-    name = name.split("_noise",1)[0]
-    fig, ax = plt.subplots()
-    ax.set_xlabel('execution time [s]')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over execution time, model ' + name)
-    for dist, times, solver in zip(distancesU, timesU, solvers_unmatched):
-        ax.plot(times, dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "unmatched_model_" + name + "_noisy_mse_times.png", dpi=600)
-
-    # Plotting Iterations
-    fig, ax = plt.subplots()
-    ax.set_xlabel('number of iterations')
-    ax.set_ylabel('MSE')
-    ax.set_ylim([None, y_max])
-    ax.set_title(f'Mean Square Error over number of iterations, model ' + name)
-    for dist, solver in zip(distancesU, solvers_unmatched):
-        ax.plot(list(range(min_iter,max_iter,iter_steps)), dist, label=solver.solver_name, linestyle=solver.linestyle)
-    ax.legend()
-
-    plt.savefig(save_path + "unmatched_model_" + name + "_noisy_mse_iter.png", dpi=600)
-
-    plt.close('all')
+test(phantoms, sinogramsNoise, solvers_unmatched, "unmatched_noise")
