@@ -24,8 +24,8 @@ nmax_iter = 20
 size = 500
 min_angles = 20
 max_angles = 501
-angles_steps = 2
-repeats = 10
+angles_steps = 20
+repeats = 20
 
 # specific linestyles, otherwise its hard to differentiate
 # stronger lines, like full line or -- are painted first
@@ -35,19 +35,8 @@ ls = [
     '-.',
     ':',
     (0, (1, 2, 1, 2, 3, 2, 3, 2)),
-    (0, (3, 4, 1, 4, 1, 4))
+    (0, (3, 2, 1, 2, 1, 2, 1, 2))
 ]
-
-# colormap, colorblindsafe from https://personal.sron.nl/~pault/#sec:qualitative
-# didnt look good
-# cm = [
-#     '#66CCEE',
-#     '#228833',
-#     '#CCBB44',
-#     '#EE6677',
-#     '#AA3377',
-#     '#4477AA'
-# ]
 
 solvers = [
     SolverTest(elsa.ABGMRES, 'matched ABGMRES', is_gmres=True, linestyle=ls[0]),
@@ -66,82 +55,105 @@ elsa.logger_pyelsa_generators.setLevel(elsa.LogLevel.OFF)
 phantom = elsa.phantoms.modifiedSheppLogan(np.array([size, size]))
 optimal_phantom = np.array(phantom)
 
-distances = [[] for _ in solvers]
-times = [[] for _ in solvers]
+def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, projector_class_unmatched: elsa.JosephsMethodCUDA, sinogram: elsa.DataContainer, times, distances, num, optimal_phantom, nmax_iter, repeats):
+    if solver.is_gmres:
+        if solver.is_unmatched:
+            solv = solver.solver_class(projector_class_unmatched, sinogram)
+        else:
+            solv = solver.solver_class(projector_class_matched, sinogram)
+    else:
+        # setup reconstruction problem
+        problem = elsa.WLSProblem(projector_class_matched, sinogram)
+        solv = solver.solver_class(problem)
+        
+    start = time.process_time()
+    x = np.asarray(solv.solve(nmax_iter))
+    times[num].append(time.process_time() - start)
+    distances[num].append(mse(x, optimal_phantom))
+
+def average(list, solvers):
+    l = [[] for _ in solvers]
+    for elem in list:
+        for i in range(len(elem)):
+            l[i].append(elem[i])
+
+    ret = [[] for _ in solvers]
+    for i in range(len(l)):
+        ret[i] = np.average(l[i], axis=0)
+
+    return ret
+
 angles = list(range(min_angles,max_angles,angles_steps))
 
-def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, projector_class_unmatched: elsa.JosephsMethodCUDA, sinogram: elsa.DataContainer, times, distances, num, optimal_phantom, nmax_iter, repeats):
-    durations = [-1.0] * repeats
-    mses = [-1.0] * repeats
+distanceRep = []
+timesRep = []
 
-    for current in range(repeats):
+for i in range(repeats):
+
+    print("Solving angles for repeat: " + str(i))
+
+    distances = [[] for _ in solvers]
+    times = [[] for _ in solvers]
+
+    for num_angles in range(min_angles,max_angles,angles_steps):
+
+        print("current angle: ", num_angles)
         
-        if solver.is_gmres:
-            if solver.is_unmatched:
-                solv = solver.solver_class(projector_class_unmatched, sinogram)
-            else:
-                solv = solver.solver_class(projector_class_matched, sinogram)
-        else:
-            # setup reconstruction problem
-            problem = elsa.WLSProblem(projector_class_matched, sinogram)
-            solv = solver.solver_class(problem)
-            
-        start = time.process_time()
-        x = np.asarray(solv.solve(nmax_iter))
-        durations[current] = time.process_time() - start
-        mses[current] = mse(x, optimal_phantom)
+        volume_descriptor = phantom.getDataDescriptor()
 
-    times[num].append(np.mean(durations))
-    distances[num].append(np.mean(mses))
+        # settings
+        arc = 180
 
+        # generate circular trajectory
+        sino_descriptor = elsa.CircleTrajectoryGenerator.createTrajectory(
+            num_angles, phantom.getDataDescriptor(), arc, size * 100, size)
 
-for num_angles in range(min_angles,max_angles,angles_steps):
+        # setup operator for 2d X-ray transform
+        projector = elsa.JosephsMethodCUDA(volume_descriptor, sino_descriptor, fast=False)
+        projectorUnmatched = elsa.JosephsMethodCUDA(volume_descriptor, sino_descriptor, fast=True)
 
-    print("current angle: ", num_angles)
-    
-    volume_descriptor = phantom.getDataDescriptor()
+        # simulate the sinogram
+        sinogram = projector.apply(phantom)
 
-    # settings
-    arc = 180
+        for j, solver in enumerate(solvers):
+            solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=times, distances=distances, num=j, optimal_phantom=optimal_phantom, nmax_iter=nmax_iter, repeats=repeats)
 
-    # generate circular trajectory
-    sino_descriptor = elsa.CircleTrajectoryGenerator.createTrajectory(
-        num_angles, phantom.getDataDescriptor(), arc, size * 100, size)
+    distanceRep.append(distances)
+    timesRep.append(times)
 
-    # setup operator for 2d X-ray transform
-    projector = elsa.JosephsMethodCUDA(volume_descriptor, sino_descriptor, fast=False)
-    projectorUnmatched = elsa.JosephsMethodCUDA(volume_descriptor, sino_descriptor, fast=True)
-
-    # simulate the sinogram
-    sinogram = projector.apply(phantom)
-
-    for j, solver in enumerate(solvers):
-        solve(solver=solver, projector_class_matched=projector, projector_class_unmatched=projectorUnmatched, sinogram=sinogram, times=times, distances=distances, num=j, optimal_phantom=optimal_phantom, nmax_iter=nmax_iter, repeats=repeats)
+# average data that can be plotted
+dist = average(distanceRep, solvers)
+tim = average(timesRep, solvers)
 
 print(f'Done with optimizing starting to plot now')
 
 import matplotlib.pyplot as plt  # local imports so that we can switch to headless mode before importing
 
-dir_path = os.path.dirname(os.path.abspath(__file__)) + "/angles_comparison/"
+save_path = os.path.dirname(os.path.abspath(__file__)) + "/angles_comparison/"
+
+# create new folder for runtime so pictures dont overwrite each other
+timestr = time.strftime("%d%m%Y-%H%M%S")
+save_path = save_path + "/" + timestr + "/"
+os.mkdir(save_path)
 
 # Plotting MSE
 fig, ax = plt.subplots()
 ax.set_xlabel('number of angles')
 ax.set_ylabel('MSE')
 ax.set_title(f'Mean Square Error over number of angles')
-for dist, solver in zip(distances, solvers):
-    ax.plot(angles, dist, label=solver.solver_name, linestyle=solver.linestyle)
+for d, solver in zip(dist, solvers):
+    ax.plot(angles, d, label=solver.solver_name, linestyle=solver.linestyle)
 ax.legend()
 
-plt.savefig(dir_path + "mse_num_angles.png", dpi=600)
+plt.savefig(save_path + "mse_num_angles.png", dpi=600)
 
 # Plotting times
 fig, ax = plt.subplots()
 ax.set_xlabel('number of angles')
 ax.set_ylabel('execution time [s]')
 ax.set_title(f'execution time over number of angles')
-for times, solver in zip(times, solvers):
-    ax.plot(angles, times, label=solver.solver_name, linestyle=solver.linestyle)
+for t, solver in zip(tim, solvers):
+    ax.plot(angles, t, label=solver.solver_name, linestyle=solver.linestyle)
 ax.legend()
 
-plt.savefig(dir_path + "times_num_angles.png", dpi=600)
+plt.savefig(save_path + "times_num_angles.png", dpi=600)

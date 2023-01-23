@@ -102,14 +102,14 @@ def generate_sinophantom(noise, problem_size, num_angles, arc, model, dir_path):
     if noise:
         sinogramElsa = add_tomophantom_poisson(np.asarray(sinogramElsa))
 
-    np.save(dir_path + 'phantoms_sinograms/sinogram_tp_' + name, np.asarray(sinogram))
-    np.save(dir_path + 'phantoms_sinograms/sinogram_elsa_'+name, np.asarray(sinogramElsa))
-    np.save(dir_path + 'phantoms_sinograms/phantom_tp_'+name, np.asarray(phantom))
+    np.save(dir_path + 'phantoms_sinograms/sinogram_1000_tp_' + name, np.asarray(sinogram))
+    np.save(dir_path + 'phantoms_sinograms/sinogram_1000_elsa_'+name, np.asarray(sinogramElsa))
+    np.save(dir_path + 'phantoms_sinograms/phantom_1000_tp_'+name, np.asarray(phantom))
 
-problem_size = 500
+problem_size = 1000
 num_angles = 180
 arc = 360
-model_numbers = [1, 3, 14]
+model_numbers = [1]
 dir_path = os.path.dirname(os.path.abspath(__file__)) + "/"
 
 for model in model_numbers:
