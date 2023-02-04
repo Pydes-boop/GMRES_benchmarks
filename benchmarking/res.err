@@ -1,8 +1,0 @@
-Unable to init server: Could not connect: Connection refused
-Unable to init server: Could not connect: Connection refused
-
-(filter_comparison_analytical.py:2416590): Gdk-CRITICAL **: 18:16:57.955: gdk_cursor_new_for_display: assertion 'GDK_IS_DISPLAY (display)' failed
-Unable to init server: Could not connect: Connection refused
-Unable to init server: Could not connect: Connection refused
-
-(filter_comparison_analytical.py:2428392): Gdk-CRITICAL **: 18:39:12.240: gdk_cursor_new_for_display: assertion 'GDK_IS_DISPLAY (display)' failed

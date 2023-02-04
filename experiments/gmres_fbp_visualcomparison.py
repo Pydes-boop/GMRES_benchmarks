@@ -564,13 +564,13 @@ def create_figure(filter):
     ax[2, i].axis('off')
     ax[3, i].axis('off')
 
-    return im
+    return im, fig
 
 fntsize = 8
 
 figure, ax = plt.subplots(nrows=4, ncols=2, figsize=(5.98, 12))
 
-im = create_figure(True)
+im, fig1 = create_figure(True)
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -581,14 +581,16 @@ plt.subplots_adjust(wspace=0, hspace=0)
 # cb.update_ticks()
 # cb.set_ticklabels(ticklabels)
 
-plt.savefig("gmres_fbp_comparison_filter.png", dpi=300, bbox_inches='tight')
+save_path = os.path.dirname(os.path.abspath(__file__)) + "/gmres_fbp_visualcomparison/"
+
+plt.savefig(save_path + "gmres_fbp_comparison_filter.png", dpi=300, bbox_inches='tight')
 # plt.show()
 
 fntsize = 8
 
 figure, ax = plt.subplots(nrows=4, ncols=2, figsize=(6.9, 12))
 
-im = create_figure(False)
+im, fig2 = create_figure(False)
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -599,5 +601,30 @@ cb.locator = tick_locator
 cb.update_ticks()
 cb.set_ticklabels(ticklabels)
 
-plt.savefig("gmres_fbp_comparison_no_filter.png", dpi=300, bbox_inches='tight')
+plt.savefig(save_path + "gmres_fbp_comparison_no_filter.png", dpi=300, bbox_inches='tight')
 # plt.show()
+
+def save_fig(f, name, max, min, red_box=False):
+    plt.figure()
+    plt.axis("off")
+    plt.imshow(f, cmap=cmap, vmax=max, vmin=min)
+    if red_box:
+        rect = patches.Rectangle((400, 400), 200, 200, linewidth=2, edgecolor='r', facecolor='none')
+        ax = plt.gca()
+        ax.add_patch(rect)
+    plt.savefig(name, dpi=280, bbox_inches='tight', pad_inches=0)
+    plt.close('all')
+
+count = 1
+for f in fig1:
+    save_fig(f, save_path + "gmres_fbp_comparison_filter_" + str(count) + ".png", np.max(f), np.min(f), red_box=True)
+    save_fig(f[400:600,400:600], save_path + "gmres_fbp_comparison_filter_" + str(count) + "_zoomed.png", np.max(f), np.min(f))
+
+    count = count + 1
+
+count = 1
+for f in fig2:
+    save_fig(f, save_path + "gmres_fbp_comparison_no_filter_" + str(count) + ".png", np.max(f), np.min(f), red_box=True)
+    save_fig(f[400:600,400:600], save_path + "gmres_fbp_comparison_no_filter_" + str(count) + "_zoomed.png", np.max(f), np.min(f))
+
+    count = count + 1
