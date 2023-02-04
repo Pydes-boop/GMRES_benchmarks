@@ -172,11 +172,11 @@ def test(phantoms, sinograms, solvers, experiment: str):
         ax.set_xlabel('execution time [s]')
         ax.set_ylabel('MSE')
         ax.set_title(f'Mean Square Error over execution time, model ' + name)
-        for d, t, solver in zip(dist, tim, solvers):
+        for d, t, solver, mine, maxe in zip(dist, tim, solvers, timmin, timmax):
             ax.plot(t, d, label=solver.solver_name, linestyle=solver.linestyle)
         ax.legend()
 
-        plt.savefig(save_path + experiment + "_model_" + name + "_mse_times.png", dpi=600)
+        plt.savefig(save_path + experiment + "_model_" + name + "_mse_times.png", dpi=1200, bbox_inches='tight')
 
         # Plotting Iterations
         fig, ax = plt.subplots()
@@ -187,7 +187,7 @@ def test(phantoms, sinograms, solvers, experiment: str):
             ax.plot(list(range(min_iter,max_iter,iter_steps)), d, label=solver.solver_name, linestyle=solver.linestyle)
         ax.legend()
 
-        plt.savefig(save_path + experiment + "_model_" + name + "_mse_iter.png", dpi=600)
+        plt.savefig(save_path + experiment + "_model_" + name + "_mse_iter.png", dpi=1200, bbox_inches='tight')
 
         plt.close('all')
 

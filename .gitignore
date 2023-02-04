@@ -131,3 +131,11 @@ dmypy.json
 # dont upload images
 
 # *.png
+
+elsa/
+htc2022*
+20201111_walnut_projections/
+.vscode/
+
+real_ct_data/walnut/reconstruction.npy
+real_ct_data/walnut/sinogram.npy

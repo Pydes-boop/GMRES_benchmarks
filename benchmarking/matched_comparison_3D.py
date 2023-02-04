@@ -173,7 +173,7 @@ def test(phantom, sinogram, solvers, experiment: str):
         ax.plot(t, d, label=solver.solver_name, linestyle=solver.linestyle)
     ax.legend()
 
-    plt.savefig(save_path + experiment +"_model_3D_mse_times.png", dpi=600)
+    plt.savefig(save_path + experiment +"_model_3D_mse_times.png", dpi=1200, bbox_inches='tight')
 
     # Plotting Iterations
     fig, ax = plt.subplots()
@@ -184,7 +184,7 @@ def test(phantom, sinogram, solvers, experiment: str):
         ax.plot(list(range(min_iter,max_iter,iter_steps)), d, label=solver.solver_name, linestyle=solver.linestyle)
     ax.legend()
 
-    plt.savefig(save_path + experiment + "_model_3D_mse_iter.png", dpi=600)
+    plt.savefig(save_path + experiment + "_model_3D_mse_iter.png", dpi=1200, bbox_inches='tight')
 
     plt.close('all')
 
