@@ -8,6 +8,7 @@ from tomophantom import TomoP2D
 from tomophantom.supp.libraryToDict import modelfile2Dtolist
 
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib import ticker
 
 # From https://stackoverflow.com/questions/34859628/has-someone-made-the-parula-colormap-in-matplotlib
 
@@ -288,13 +289,26 @@ def tomophantom_model(model, size):
 cmap = parula_map
 
 fig, ax = plt.subplots(nrows=1, ncols=3)
-im = ax[0].imshow(np.asarray(tomophantom_model(1, 500)), cmap=cmap)
+im = ax[0].imshow(np.asarray(tomophantom_model(1, 1000)), cmap=cmap)
 ax[0].set_title("phantom tomophantom model (1)", fontsize=8)
-ax[1].imshow(np.asarray(tomophantom_model(3, 500)), cmap=cmap)
+ax[0].axis('off')
+ax[1].imshow(np.asarray(tomophantom_model(3, 1000)), cmap=cmap)
 ax[1].set_title("phantom tomophantom model (3)", fontsize=8)
-ax[2].imshow(np.asarray(tomophantom_model(14, 500)), cmap=cmap)
+ax[1].axis('off')
+ax[2].imshow(np.asarray(tomophantom_model(14, 1000)), cmap=cmap)
 ax[2].set_title("phantom tomophantom model (14)", fontsize=8)
+ax[2].axis('off')
 
 # ticklabels = ['0', '0.5', '1.0']
-cb = fig.colorbar(im,ax=ax.ravel().tolist(), fraction=0.02, pad=0.04)
+
+ticklabels = ['0', '0.5', '1.0']
+cb = fig.colorbar(im,ax=ax.ravel().tolist(), fraction=0.014, pad=0.04)
+tick_locator = ticker.LinearLocator(numticks=3)
+cb.locator = tick_locator
+cb.update_ticks()
+cb.set_ticklabels(ticklabels)
+
+# cb = fig.colorbar(im,ax=ax.ravel().tolist(), fraction=0.02, pad=0.04)
+fig.set_size_inches(10, 3)
+plt.savefig("tomophantom_phantoms.png", dpi=300, bbox_inches='tight')
 plt.show()

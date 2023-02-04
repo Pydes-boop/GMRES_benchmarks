@@ -31,6 +31,12 @@ def filter_sinogram(sinogram, sino_descriptor = None):
     pad_width = ((0, projection_size_padded - sinogram_shape), (0, 0))
     padded_sinogram = np.pad(np_sinogram, pad_width, mode="constant", constant_values=0)
 
+    print(np_sinogram.shape)
+    print(projection_size_padded)
+    print(pad_width)
+    print(np.shape(padded_sinogram))
+    print(sinogram_shape)
+
     # Ramp filter
     fourier_filter = ramp_filter(projection_size_padded)
 
@@ -516,102 +522,82 @@ parula_map = LinearSegmentedColormap.from_list('parula', cm_data)
 cmap = "gray"
 import matplotlib.pyplot as plt
 from matplotlib import ticker
+import matplotlib.patches as patches
 
-# plt.figure(0)
+def create_figure(filter):
+    fig = []
+
+    i = 0
+    fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=2))
+    fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=5))
+    fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=10))
+    fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=20))
+
+    ax[0, i].imshow(fig[0], vmin=np.min(fig[0]), vmax=np.max(fig[0]), cmap=cmap)
+    ax[1, i].imshow(fig[1], vmin=np.min(fig[1]), vmax=np.max(fig[1]), cmap=cmap)
+    ax[2, i].imshow(fig[2], vmin=np.min(fig[2]), vmax=np.max(fig[2]), cmap=cmap)
+    ax[3, i].imshow(fig[3], vmin=np.min(fig[3]), vmax=np.max(fig[3]), cmap=cmap)
+
+    # Add rectangle to images
+    rect = patches.Rectangle((400, 400), 200, 200, linewidth=1, edgecolor='r', facecolor='none')
+    ax[0, i].add_patch(rect)
+    rect = patches.Rectangle((400, 400), 200, 200, linewidth=1, edgecolor='r', facecolor='none')
+    ax[1, i].add_patch(rect)
+    rect = patches.Rectangle((400, 400), 200, 200, linewidth=1, edgecolor='r', facecolor='none')
+    ax[2, i].add_patch(rect)
+    rect = patches.Rectangle((400, 400), 200, 200, linewidth=1, edgecolor='r', facecolor='none')
+    ax[3, i].add_patch(rect)
+
+    ax[0, i].axis('off')
+    ax[1, i].axis('off')
+    ax[2, i].axis('off')
+    ax[3, i].axis('off')
+
+    i = 1
+    ax[0, i].imshow(fig[0][400:600,400:600], vmin=np.min(fig[0]), vmax=np.max(fig[0]), cmap=cmap)
+    ax[1, i].imshow(fig[1][400:600,400:600], vmin=np.min(fig[1]), vmax=np.max(fig[1]), cmap=cmap)
+    ax[2, i].imshow(fig[2][400:600,400:600], vmin=np.min(fig[2]), vmax=np.max(fig[2]), cmap=cmap)
+    im = ax[3, i].imshow(fig[3][400:600,400:600], vmin=np.min(fig[3]), vmax=np.max(fig[3]), cmap=cmap)
+
+    ax[0, i].axis('off')
+    ax[1, i].axis('off')
+    ax[2, i].axis('off')
+    ax[3, i].axis('off')
+
+    return im
 
 fntsize = 8
 
-figure, ax = plt.subplots(nrows=4, ncols=4)
+figure, ax = plt.subplots(nrows=4, ncols=2, figsize=(5.98, 12))
 
-fig = []
+im = create_figure(True)
 
-filter=True
+plt.subplots_adjust(wspace=0, hspace=0)
 
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=2))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=5))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=10))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=20))
+# ticklabels = ['0', '0.5', '1.0']
+# cb = figure.colorbar(im, ax=ax.ravel().tolist(), fraction=0.084, pad=0.04)
+# tick_locator = ticker.LinearLocator(numticks=3)
+# cb.locator = tick_locator
+# cb.update_ticks()
+# cb.set_ticklabels(ticklabels)
 
+plt.savefig("gmres_fbp_comparison_filter.png", dpi=300, bbox_inches='tight')
+# plt.show()
 
-i = 0
-ax[0, i].imshow(fig[0], vmin=np.min(fig[0]), vmax=np.max(fig[0]), cmap=cmap)
-ax[1, i].imshow(fig[1], vmin=np.min(fig[1]), vmax=np.max(fig[1]), cmap=cmap)
-ax[2, i].imshow(fig[2], vmin=np.min(fig[2]), vmax=np.max(fig[2]), cmap=cmap)
-ax[3, i].imshow(fig[3], vmin=np.min(fig[3]), vmax=np.max(fig[3]), cmap=cmap)
+fntsize = 8
 
-ax[0, i].axis('off')
-ax[1, i].axis('off')
-ax[2, i].axis('off')
-ax[3, i].axis('off')
+figure, ax = plt.subplots(nrows=4, ncols=2, figsize=(6.9, 12))
 
-fig = []
+im = create_figure(False)
 
-filter=False
-
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=2))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=5))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=10))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=20))
-
-i = 1
-ax[0, i].imshow(fig[0], vmin=np.min(fig[0]), vmax=np.max(fig[0]), cmap=cmap)
-ax[1, i].imshow(fig[1], vmin=np.min(fig[1]), vmax=np.max(fig[1]), cmap=cmap)
-im = ax[2, i].imshow(fig[2], vmin=np.min(fig[2]), vmax=np.max(fig[2]), cmap=cmap)
-ax[3, i].imshow(fig[3], vmin=np.min(fig[3]), vmax=np.max(fig[3]), cmap=cmap)
-
-ax[0, i].axis('off')
-ax[1, i].axis('off')
-ax[2, i].axis('off')
-ax[3, i].axis('off')
+plt.subplots_adjust(wspace=0, hspace=0)
 
 ticklabels = ['0', '0.5', '1.0']
-cb = figure.colorbar(im,ax=ax.ravel().tolist(), fraction=0.046, pad=0.04)
+cb = figure.colorbar(im, ax=ax.ravel().tolist(), fraction=0.084)
 tick_locator = ticker.LinearLocator(numticks=3)
 cb.locator = tick_locator
 cb.update_ticks()
 cb.set_ticklabels(ticklabels)
 
-fig = []
-
-filter=True
-
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=2))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=5))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=10))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=20))
-
-i = 2
-
-ax[0, i].imshow(fig[0][400:600,400:600], vmin=np.min(fig[0]), vmax=np.max(fig[0]), cmap=cmap)
-ax[1, i].imshow(fig[1][400:600,400:600], vmin=np.min(fig[1]), vmax=np.max(fig[1]), cmap=cmap)
-ax[2, i].imshow(fig[2][400:600,400:600], vmin=np.min(fig[2]), vmax=np.max(fig[2]), cmap=cmap)
-ax[3, i].imshow(fig[3][400:600,400:600], vmin=np.min(fig[3]), vmax=np.max(fig[3]), cmap=cmap)
-
-ax[0, i].axis('off')
-ax[1, i].axis('off')
-ax[2, i].axis('off')
-ax[3, i].axis('off')
-
-fig = []
-
-filter=False
-
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=2))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=5))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=10))
-fig.append(solve(sino_descriptor=sino_descriptor, solverClass=BAGMRES, projector=projector, sinogram=elsa.DataContainer(np.load(sinogramsNoise[0])), x0=x0, filter=filter, nmax_iterations=20))
-
-i = 3
-
-ax[0, i].imshow(fig[0][400:600,400:600], vmin=np.min(fig[0]), vmax=np.max(fig[0]), cmap=cmap)
-ax[1, i].imshow(fig[1][400:600,400:600], vmin=np.min(fig[1]), vmax=np.max(fig[1]), cmap=cmap)
-im = ax[2, i].imshow(fig[2][400:600,400:600], vmin=np.min(fig[2]), vmax=np.max(fig[2]), cmap=cmap)
-ax[3, i].imshow(fig[3][400:600,400:600], vmin=np.min(fig[3]), vmax=np.max(fig[3]), cmap=cmap)
-
-ax[0, i].axis('off')
-ax[1, i].axis('off')
-ax[2, i].axis('off')
-ax[3, i].axis('off')
-
-plt.savefig("gmres_fbp_comparison.png")
+plt.savefig("gmres_fbp_comparison_no_filter.png", dpi=300, bbox_inches='tight')
 # plt.show()
