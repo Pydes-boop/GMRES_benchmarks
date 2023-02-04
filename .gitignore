@@ -134,8 +134,11 @@ dmypy.json
 
 elsa/
 htc2022*
-20201111_walnut_projections/
+*.tif
 .vscode/
 
 real_ct_data/walnut/reconstruction.npy
 real_ct_data/walnut/sinogram.npy
+
+elsa_clone/
+*.npy

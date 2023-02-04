@@ -141,18 +141,27 @@ cb.set_ticklabels(ticklabels)
 # cb.outline.set_visible(False)
 # cb.set_ticks([])
 # cb.set_ticks([0, 0.5, 1])
+# plt.gca().set_visible(False)
 
-plt.savefig("FBP_examples.png", dpi=300, bbox_inches='tight')
-plt.show()
+save_path = os.path.dirname(os.path.abspath(__file__)) + "/fbp_examples/"
 
-# def save_fig(f, name, m):
-#     plt.figure()
-#     plt.imshow(f, cmap=cmap, vmax=m)
-#     plt.axis("off")
-#     plt.savefig(name, dpi=600)
+plt.savefig(save_path + "FBP_examples_comparison_full.png", dpi=300, bbox_inches='tight')
+# plt.show()
 
-# count = 1
-# for f in fig:
-#     save_fig(f, "FBP_Examples_" + str(count) + ".png", np.max(f))
-#     save_fig(f[400:600,400:600], "FBP_Examples_" + str(count) + "_zoomed.png", np.max(f))
-#     count = count + 1
+def save_fig(f, name, max, min, red_box=False):
+    plt.figure()
+    plt.axis("off")
+    plt.imshow(f, cmap=cmap, vmax=max, vmin=min)
+    if red_box:
+        rect = patches.Rectangle((400, 400), 200, 200, linewidth=2, edgecolor='r', facecolor='none')
+        ax = plt.gca()
+        ax.add_patch(rect)
+    plt.savefig(name, dpi=280, bbox_inches='tight', pad_inches=0)
+    plt.close('all')
+
+count = 1
+for f in fig:
+    save_fig(f, save_path + "FBP_Examples_" + str(count) + ".png", np.max(f), np.min(f), red_box=True)
+    save_fig(f[400:600,400:600], save_path + "FBP_Examples_" + str(count) + "_zoomed.png", np.max(f), np.min(f))
+
+    count = count + 1

@@ -305,8 +305,10 @@ sinograms.sort()
 
 def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, projector_class_unmatched: elsa.JosephsMethodCUDA, sinogram: elsa.DataContainer, times, distances, num, optimal_phantom, nmax_iter, repeats, sino_descriptor, x0, filter=False):
     start = time.process_time()
-    x = np.asarray(solver.solver_class(projector_class_unmatched, elsa.adjoint(projector_class_unmatched), sinogram, x0, nmax_iter, sino_descriptor=sino_descriptor, filter=solver.filter))
-    times[num].append(time.process_time() - start)
+    x = solver.solver_class(projector_class_unmatched, elsa.adjoint(projector_class_unmatched), sinogram, x0, nmax_iter, sino_descriptor=sino_descriptor, filter=solver.filter)
+    finish = time.process_time() - start
+    x = np.asarray(x)
+    times[num].append(finish)
     distances[num].append(mse(x, optimal_phantom))
 
 def average(list, solvers):
@@ -368,7 +370,7 @@ def test(phantoms, sinograms, solvers, experiment: str):
             ax.plot(t, d, label=solver.solver_name, linestyle=solver.linestyle)
         ax.legend()
 
-        plt.savefig(save_path + experiment + "_model_" + str(name) +"_mse_times.png", dpi=600)
+        plt.savefig(save_path + experiment + "_model_" + str(name) +"_mse_times.pdf", bbox_inches='tight')
 
         # Plotting Iterations
         fig, ax = plt.subplots()
@@ -379,7 +381,7 @@ def test(phantoms, sinograms, solvers, experiment: str):
             ax.plot(list(range(min_iter,max_iter,iter_steps)), d, label=solver.solver_name, linestyle=solver.linestyle)
         ax.legend()
 
-        plt.savefig(save_path + experiment + "_model_" + str(name) + "_mse_iter.png", dpi=600)
+        plt.savefig(save_path + experiment + "_model_" + str(name) + "_mse_iter.pdf", bbox_inches='tight')
 
         plt.close('all')
 

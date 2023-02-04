@@ -22,10 +22,10 @@ def mse(optimized: np.ndarray, original: np.ndarray) -> float:
 # todo change iter depending on matched_comparison
 nmax_iter = 20
 size = 500
-min_angles = 10
+min_angles = 20
 max_angles = 501
-angles_steps = 10
-repeats = 20
+angles_steps = 20
+repeats = 3
 
 # specific linestyles, otherwise its hard to differentiate
 # stronger lines, like full line or -- are painted first
@@ -67,8 +67,10 @@ def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, p
         solv = solver.solver_class(problem)
         
     start = time.process_time()
-    x = np.asarray(solv.solve(nmax_iter))
-    times[num].append(time.process_time() - start)
+    x = solv.solve(nmax_iter)
+    finish = time.process_time() - start
+    x = np.asarray(x)
+    times[num].append(finish)
     distances[num].append(mse(x, optimal_phantom))
 
 def average(list, solvers):
@@ -149,7 +151,7 @@ for d, solver in zip(dist, solvers):
     ax.plot(angles, d, label=solver.solver_name, linestyle=solver.linestyle)
 ax.legend()
 
-plt.savefig(save_path + "mse_num_angles.png", dpi=1200, bbox_inches='tight')
+plt.savefig(save_path + "mse_num_angles.pdf", bbox_inches='tight')
 
 # Plotting times
 fig, ax = plt.subplots()
@@ -161,4 +163,4 @@ for t, solver, mine, maxe in zip(tim, solvers, timmin, timmax):
     plt.fill_between(angles, mine, maxe, alpha=0.2)
 ax.legend()
 
-plt.savefig(save_path + "times_num_angles.png", dpi=1200, bbox_inches='tight')
+plt.savefig(save_path + "times_num_angles.pdf", bbox_inches='tight')

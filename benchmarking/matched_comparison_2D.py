@@ -122,8 +122,10 @@ def solve(solver: SolverTest, projector_class_matched: elsa.JosephsMethodCUDA, p
         solv = solver.solver_class(problem)
         
     start = time.process_time()
-    x = np.asarray(solv.solve(nmax_iter))
-    times[num].append(time.process_time() - start)
+    x = solv.solve(nmax_iter)
+    finish = time.process_time() - start
+    x = np.asarray(x)
+    times[num].append(finish)
     distances[num].append(mse(x, optimal_phantom))
 
 def average(list, solvers):
@@ -172,11 +174,11 @@ def test(phantoms, sinograms, solvers, experiment: str):
         ax.set_xlabel('execution time [s]')
         ax.set_ylabel('MSE')
         ax.set_title(f'Mean Square Error over execution time, model ' + name)
-        for d, t, solver, mine, maxe in zip(dist, tim, solvers):
+        for d, t, solver in zip(dist, tim, solvers):
             ax.plot(t, d, label=solver.solver_name, linestyle=solver.linestyle)
         ax.legend()
 
-        plt.savefig(save_path + experiment + "_model_" + name + "_mse_times.png", dpi=1200, bbox_inches='tight')
+        plt.savefig(save_path + experiment + "_model_" + name + "_mse_times.pdf", bbox_inches='tight')
 
         # Plotting Iterations
         fig, ax = plt.subplots()
@@ -187,7 +189,7 @@ def test(phantoms, sinograms, solvers, experiment: str):
             ax.plot(list(range(min_iter,max_iter,iter_steps)), d, label=solver.solver_name, linestyle=solver.linestyle)
         ax.legend()
 
-        plt.savefig(save_path + experiment + "_model_" + name + "_mse_iter.png", dpi=1200, bbox_inches='tight')
+        plt.savefig(save_path + experiment + "_model_" + name + "_mse_iter.pdf", bbox_inches='tight')
 
         plt.close('all')
 

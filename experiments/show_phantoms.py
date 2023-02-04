@@ -309,6 +309,8 @@ cb.update_ticks()
 cb.set_ticklabels(ticklabels)
 
 # cb = fig.colorbar(im,ax=ax.ravel().tolist(), fraction=0.02, pad=0.04)
+save_path = os.path.dirname(os.path.abspath(__file__)) + "/show_phantoms/"
+
 fig.set_size_inches(10, 3)
-plt.savefig("tomophantom_phantoms.png", dpi=300, bbox_inches='tight')
+plt.savefig(save_path + "tomophantom_phantoms.png", dpi=300, bbox_inches='tight')
 plt.show()
