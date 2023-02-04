@@ -172,7 +172,7 @@ def test(phantoms, sinograms, solvers, experiment: str):
         ax.set_xlabel('execution time [s]')
         ax.set_ylabel('MSE')
         ax.set_title(f'Mean Square Error over execution time, model ' + name)
-        for d, t, solver, mine, maxe in zip(dist, tim, solvers, timmin, timmax):
+        for d, t, solver, mine, maxe in zip(dist, tim, solvers):
             ax.plot(t, d, label=solver.solver_name, linestyle=solver.linestyle)
         ax.legend()
 
