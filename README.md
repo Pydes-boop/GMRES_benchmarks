@@ -6,35 +6,55 @@ Installation instructions for all dependencies can be found at the [bottom](#pre
 
 If you are interested in how GMRES is implemented you can also find different python versions, with or without elsa bindings at [Pydes-boop/GMRES](https://github.com/Pydes-boop/GMRES), which also gives a short introduction into the GMRES algorithms and their use-cases.
 
+## Potential Issues:
+
+Experiments were run on older custom version of elsa with CG solver which has been removed since then, replace any occurence of CG with the new CGLS solver.
+
+CircleTrajectoryGenerator is also from the experimental elsa version and has to be replaced with a fitting up-to-date one. Details can be found in [walnut readme](real_ct_data/walnut/README.md) but might be relevant to plastic disc experiments as well.
+
 ## Content
 
 ### Benchmarking
+   
 
-1.   [matched_comparison.py](benchmarking/matched_comparison.py)
-     - compares different matched solvers from elsa against AB-, BA- GMRES
-     - fixed phantom size
-     - compares scenarios with different max_iterations
-     - compares scenarios with different amounts of angles (40, 180, 400) for an arc of 180°
+1.   [angles_comparison.py](benchmarking/angles_comparison.py)
+     - compares scenarios with different amounts of angles starting at 20, up to 500 in steps of +20 for an arc of 180°
      - compares matched and unmatched versions of AB-, BA- GMRES against CG
-     - plots mse against iterations for every scenario
-     - plots mse against execution time for every scenario
+     
+1.   [filter_comparison_analytical.py](benchmarking/filter_comparison_analytical.py)
+     - compares different solvers with filtered Versions of AB- , BA-GMRES 
 
-2.   [angles_comparison.py](benchmarking/angles_comparison.py)
-     - currently unused as its weird to plot this data
-     - fixed max_iterations
-     - fixed phantom size
-     - compares different matched solvers from elsa against AB-, BA- GMRES
-     - compares scenarios with different amounts of angles starting at 20, up to 420 in steps of +20 for an arc of 180°
-     - compares matched and unmatched versions of AB-, BA- GMRES against CG
+3.   [matched_comparison_2D.py](benchmarking/matched_comparison_2D.py)
+     - compares matched and unmatched versions of AB-, BA- GMRES against CG  
+     
+4.   [matched_comparison_3D.py](benchmarking/matched_comparison_3D.py)
+     - compares different solvers with filtered Versions of AB- , BA-GMRES
+
 
 ### Experiments
 
-1.   [tomophantom_elsa_sinograms.py](experiments/tomophantom_elsa_sinograms.py)
-     - generates different analytical phantoms using tomophantom and compares them to elsas numerical phantoms
-     - compares scenarios with different amounts of angles starting at 20, up to 420 in steps of +20 for an arc of 180°
-     - applies noise to tomophantom phantoms
-     - recontructs using ABGMRES
-     - shows plot of true phantom, elsa sinogram, noisy tomophantom sinogram and ABGMRES reconstruction using noisy tomophantom sinogram
+1.   [fbp_examples.py](experiments/fbp_examples.py)
+     - generates different example images for reconstruction with FBP vs CG
+     
+2.   [gmres_fbp_visualcomparison.py](experiments/gmres_fbp_visualcomparison.py)
+     - compares GMRES to GMRES with additional filtering in visual examples
+     
+3.   Sinogram generators for tests:
+     - [sinogram_generator_3D.py](experiments/sinogram_generator_3D.py)
+     - [sinogram_generator.py](experiments/sinogram_generator.py)
+     - [tomophantom_sinogram.py](experiments/tomophantom_sinogram.py)
+     
+
+### Real CT Data testing:
+
+1. [plastic disc dataset](https://zenodo.org/record/6984868):
+     - reconstructs plastic disc with CG and GMRES algorithms
+     - visual image comparison and benchmark based on FBP as ground truth
+
+2. [walnut dataset](https://zenodo.org/record/6986012):
+     - reconstructs walnut with GMRES and CG
+     - 3D visual comparison with volume and slice viewers
+     - visual image comparison of single specific slices
 
 ## Prerequisites and installation instructions
 
