@@ -47,11 +47,13 @@ CircleTrajectoryGenerator is also from the experimental elsa version and has to 
 
 ### Real CT Data testing:
 
-1. [plastic disc dataset](https://zenodo.org/record/6984868):
+1. [2D plastic disc reconstructions](real_ct_data/plastic_disc/):
+     - [dataset](https://zenodo.org/record/6984868)
      - reconstructs plastic disc with CG and GMRES algorithms
      - visual image comparison and benchmark based on FBP as ground truth
 
-2. [walnut dataset](https://zenodo.org/record/6986012):
+2. [3D walnut reconstruction](real_ct_data/walnut/):
+     - [dataset](https://zenodo.org/record/6986012)
      - reconstructs walnut with GMRES and CG
      - 3D visual comparison with volume and slice viewers
      - visual image comparison of single specific slices
