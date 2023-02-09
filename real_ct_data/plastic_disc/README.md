@@ -21,18 +21,19 @@ sino_descriptor = elsa.CircleTrajectoryGenerator.fromAngularIncrement(
     )
 ```
 
-This might not be part of your elsa version, instead you can try to use createTrajectory instead of fromAngularIncrement:
+This might not be part of your elsa version, instead you can try to use trajectoryFromAngles instead of fromAngularIncrement:
 
 ```
-sino_descriptor = elsa.CircleTrajectoryGenerator.createTrajectory(
-    721,
-    volume_descriptor,
-    360,
-    dist_source_origin,
-    dist_origin_detector,
-    [0, 0],
-    [0, 0, 0],  # Offset of origin
-    detector_size,
-    detector_spacing,
-)
+sino_descriptor = elsa.CircleTrajectoryGenerator.trajectoryFromAngles(
+        angles,
+        volume_descriptor,
+        ds2c,
+        dc2d,
+        [0],
+        [0, 0],
+        [num_detpixel] * 2,
+        [detpixel_spacing] * 2,
+    )
 ```
+
+Otherwise reference walnut Readme for another option or look at the elsa docs.
