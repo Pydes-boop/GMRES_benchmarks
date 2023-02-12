@@ -31,7 +31,7 @@ CircleTrajectoryGenerator is also from the experimental elsa version and has to 
      - compares different solvers with filtered Versions of AB- , BA-GMRES
 
 
-### Experiments
+### Experiments / Showcases
 
 1.   [fbp_examples.py](experiments/fbp_examples.py)
      - generates different example images for reconstruction with FBP vs CG
